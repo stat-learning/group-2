@@ -1,7 +1,7 @@
 # group-two
 
-Emmett Powers
-Josh Dey
-Gio Ramirez
+Emmett Powers  
+Josh Dey  
+Gio Ramirez   
 
-In this project we will eat food at Tecos. 
+We are investigating Yelp and why Teco's has better horchata than everywhere else, also In this project we will eat food at Tecos. 
