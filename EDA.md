@@ -62,25 +62,19 @@ rdata.clean <- rdata[complete.cases(rdata),]
 
 # Univariate Analysis of Response
 ```{r}
-rdata$RestaurantsPriceRange2 <- strtoi(rdata$RestaurantsPriceRange2)
-summary(rdata$RestaurantsPriceRange2)
-hist(rdata$RestaurantsPriceRange2)
-boxplot(rdata$RestaurantsPriceRange2)
+pricerange <- strtoi(rdata$RestaurantsPriceRange2)
+summary(pricerange)
+hist(pricerange)
+boxplot(pricerange)
 ```
-A use of the summary function on our response function yields the following: our Mean value is 1.672, and our median is 2. Further, if we look at our histogram we see that our observations are clustered around 1 & 2, with few around 3 & 4. Our boxplot highlights the same point.
-
-```{r}
-rdata.clean$RestaurantsPriceRange2 <- strtoi(rdata.clean$RestaurantsPriceRange2)
-summary(rdata.clean$RestaurantsPriceRange2)
-hist(rdata.clean$RestaurantsPriceRange2)
-boxplot(rdata.clean$RestaurantsPriceRange2)
-```
-
+A use of the summary function on our response function, price range, yields the following: our Mean value is 1.672, and our median is 2. Further, if we look at our histogram, which reminds us that the variable is a classifier and not continuous, we see that our observations are clustered around 1 & 2, with few around 3 & 4. Our boxplot highlights the same point. 
 
 # Bi-trivariate analyses
 
+First, let's take a look at the correlation between our data's numeric variables.  
 ```{r}
-## Missing Matrix & Elaboration on different X variables
-plot(rdata$stars, rdata$RestaurantsPriceRange2,)
-plot(rdata$review_count, rdata$RestaurantsPriceRange2)
+numeric.vars <- c("latitude", "longitude", "stars", "review_count", "RestaurantsPriceRange2")
+numeric.yelp <- subset(rdata, select = numeric.vars)
+cor(numeric.yelp)
 ```
+None of the numerical variables have any significant correlations, so our data is relatively free of covariance. This is good, because it suggests we selected variables that will all have independent effects on determining price when we put them into a model. 
