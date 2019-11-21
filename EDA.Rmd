@@ -1,6 +1,6 @@
 ---
 title: "Exploratory Data Analysis"
-author: "Emmett Powers"
+author: "Josh Dey, Gio Ramirez, Emmett Powers"
 date: "11/20/2019"
 output: pdf_document
 ---
@@ -75,9 +75,6 @@ summary(rdata.clean$RestaurantsPriceRange2)
 hist(rdata.clean$RestaurantsPriceRange2)
 boxplot(rdata.clean$RestaurantsPriceRange2)
 ```
-
-
-
 
 
 # Bi-trivariate analyses
