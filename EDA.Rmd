@@ -1,0 +1,39 @@
+---
+title: "Exploratory Data Analysis"
+author: "Emmett Powers"
+date: "11/20/2019"
+output: pdf_document
+---
+
+## Quick Project Update and Overview: 
+
+In this project, we're exploring a section of the Yelp dataset, which includes dozens of variables regarding hundreds of thousands of businesses in 10 metropolitan areas. We'd like to eventually construct a classification model that can predict the price category of a restaraunt (1, 2, 3, 4 are Yelp's categories) based off of some number of variables. Before we can do this, however, we want to play with our data. For one, we want to restrict our data frame to include only restaraunts. Additionally, we want to get an understanding of our variables and their covariance, both in order to make the best model and also just to understand interesting trends in the data. For example, maybe there are differences in variables depending on region. The goal of our EDA is to get a big picture of our data and its nuances, and hone in on variables we want to include in our model. 
+
+
+# Uploading a section of the Yelp dataset: 
+```{r}
+library(jsonlite)
+business <- stream_in(file("business.json"))
+```
+
+# We want to restrict the data frame to include only restauraunts. We're trying to do this by including only rows that mention the category "restauraunts" in the categories column. 
+```{r message = FALSE}
+install.packages("rlist")
+library(rlist)
+library(dplyr)
+library(tidyverse)
+clean.business <- na.omit(business)
+clean.business$Restaurant <- 0 
+new.business <- mutate(clean.business, Restaurant=grepl("Restaurants", clean.business$categories))
+clean.yelp <- filter(new.business, Restaurant == "TRUE")
+# not sure how this worked but if it ain't broke don't fix it 
+```
+
+# Now that we have a solid dataset of restaurants, we want to get rid of variables that we don't care to examine or that mostly contain N/As. 
+```{r}
+cleaner.yelp <- subset(clean.yelp, select = c(name, city, state, latitude, longitude, stars, 
+                                              review_count, attributes.RestaurantsTakeOut, 
+                                              attributes.RestaurantPriceRange2, attributes.OutdoorSeating,
+                                              attributes.Alcohol, categories))
+```
+
