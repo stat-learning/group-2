@@ -59,6 +59,7 @@ summary(rdata)
 In order to illustrate missingness we used the Amelia package's "missmap" function.
 Here we see we are missing about 6% of our observations, which is not too bad and thus moving forward we will likely simply remove all observations which are missing since: 1. We have no reason to believe there exists any bias in the missing observations, this seems to be rather random, 2. We would still have 94% of the data set available.
 Of note: Most of the missingness appears to be centered around more niche variables such as Outdoor Seating or Alcohol.
+
 ```{r}
 library(dplyr)
 library(Amelia)
