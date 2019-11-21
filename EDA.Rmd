@@ -5,35 +5,85 @@ date: "11/20/2019"
 output: pdf_document
 ---
 
-## Quick Project Update and Overview: 
+# Project Update and Overview: 
 
 In this project, we're exploring a section of the Yelp dataset, which includes dozens of variables regarding hundreds of thousands of businesses in 10 metropolitan areas. We'd like to eventually construct a classification model that can predict the price category of a restaraunt (1, 2, 3, 4 are Yelp's categories) based off of some number of variables. Before we can do this, however, we want to play with our data. For one, we want to restrict our data frame to include only restaraunts. Additionally, we want to get an understanding of our variables and their covariance, both in order to make the best model and also just to understand interesting trends in the data. For example, maybe there are differences in variables depending on region. The goal of our EDA is to get a big picture of our data and its nuances, and hone in on variables we want to include in our model. 
 
+# Provenance
+Public Data Set from Yelp - Link: https://www.yelp.com/dataset
+Our unit of observation for future predictive models: Price category. Yelp classifies price with 4 categories, '1' being cheapest and '4' most expensive.
+There are a total of 6,685,900 reviews each comprised of a variety of variables from price range, to category of location, through the actual star rating (1-5 scale).
 
-# Uploading a section of the Yelp dataset: 
+# Exploration
+
+## Data Prep
+Here we upload the business section of the Yelp dataset. 
+Note: we are not using the text review or photos parts of the Yelp data set.
+
 ```{r}
 library(jsonlite)
 business <- stream_in(file("business.json"))
 ```
 
-# We want to restrict the data frame to include only restauraunts. We're trying to do this by including only rows that mention the category "restauraunts" in the categories column. 
+We want to restrict the data frame to include only restauraunts. We do this by including only rows that mention the category "restauraunts" in the categories column. 
 ```{r message = FALSE}
-install.packages("rlist")
 library(rlist)
 library(dplyr)
 library(tidyverse)
-clean.business <- na.omit(business)
+clean.business <- business
 clean.business$Restaurant <- 0 
 new.business <- mutate(clean.business, Restaurant=grepl("Restaurants", clean.business$categories))
 clean.yelp <- filter(new.business, Restaurant == "TRUE")
 # not sure how this worked but if it ain't broke don't fix it 
+## Removing attribute label from data to allow further cleaning
+attribute <- clean.yelp$attributes
+restaurant_data <- clean.yelp
+restaurant_data$attributes <- NULL
+restaurant_data <- cbind(restaurant_data, attribute)
+## Now that we have a solid dataset of restaurants, we want to get rid of variables that we don't care to examine or ## that mostly contain N/As. 
+## Variables of interest
+voi <- c("name", "city", "state", "latitude", "longitude", "stars", "review_count", "RestaurantsTakeOut", 
+         "RestaurantsPriceRange2", "OutdoorSeating", "Alcohol", "categories")
+## Final Cleaned Data (Subject to Change)
+rdata <- subset(restaurant_data, select=voi)
+summary(rdata)
 ```
 
-# Now that we have a solid dataset of restaurants, we want to get rid of variables that we don't care to examine or that mostly contain N/As. 
+# Missingness
+In order to illustrate missingness we used the Amelia package's "missmap" function. Here we see we are missing about 6% of our observations. The missingness is not random; it appears to be centered around more niche variables such as whether restaurants have outdoor seating or serve alcohol. This makes sense—if a restaurant has missing information on its yelp page, it's more likely to be about these variables than a more important variable like category, which describes the types of food served there. Customers need to know what type of food they plan on eating more than if they have the option to sit outside. If we were to omit all the rows containing missing data points, we'd be left with a dataset two-thirds the size of our origninal (rdata.clean). After running some summary statistics on the two, it does not appear that the missingness is biased, but we're choosing to go forth using the dataset that has some missing values (rdata) so that we can still study the effects of variables that contain most of the missing data. This would allow us to, say, get a more accurate answer to the question "are restaurants that serve alcohol more expensive?"
 ```{r}
-cleaner.yelp <- subset(clean.yelp, select = c(name, city, state, latitude, longitude, stars, 
-                                              review_count, attributes.RestaurantsTakeOut, 
-                                              attributes.RestaurantPriceRange2, attributes.OutdoorSeating,
-                                              attributes.Alcohol, categories))
+library(dplyr)
+library(Amelia)
+missmap(rdata)
+#Cleaning Data
+rdata.clean <- rdata[complete.cases(rdata),]
+#We won't be using this cleaner data, for now. 
 ```
 
+# Univariate Analysis of Response
+```{r}
+rdata$RestaurantsPriceRange2 <- strtoi(rdata$RestaurantsPriceRange2)
+summary(rdata$RestaurantsPriceRange2)
+hist(rdata$RestaurantsPriceRange2)
+boxplot(rdata$RestaurantsPriceRange2)
+```
+A use of the summary function on our response function yields the following: our Mean value is 1.672, and our median is 2. Further, if we look at our histogram we see that our observations are clustered around 1 & 2, with few around 3 & 4. Our boxplot highlights the same point.
+
+```{r}
+rdata.clean$RestaurantsPriceRange2 <- strtoi(rdata.clean$RestaurantsPriceRange2)
+summary(rdata.clean$RestaurantsPriceRange2)
+hist(rdata.clean$RestaurantsPriceRange2)
+boxplot(rdata.clean$RestaurantsPriceRange2)
+```
+
+
+
+
+
+# Bi-trivariate analyses
+
+```{r}
+## Missing Matrix & Elaboration on different X variables
+plot(rdata$stars, rdata$RestaurantsPriceRange2,)
+plot(rdata$review_count, rdata$RestaurantsPriceRange2)
+```
