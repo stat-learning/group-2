@@ -33,25 +33,28 @@ plot(t1)
 text(t1, pretty = 0)
 ```
 
+Random Forest: 
 
+```{r}
+boot_ind <- sample(1:nrow(rdata.clean), 
+                   replace = TRUE)
+food_boot <- rdata.clean[boot_ind, ]
+```
 
+```{r}
+m <- sqrt(ncol(food_boot))
+names(food_boot)
+rforest_ind <- sample(1:ncol(food_boot),
+                      size = m, replace = FALSE)
+rforest_ind
+food_rforest <- food_boot[ , c(rforest_ind),  ]
+```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+```{r message = FALSE, fig.height=5, fig.align="center"}
+library(tree)
+t1 <- tree(rdata.clean$RestaurantsPriceRange2 ~ ., data = food_rforest)
+plot(t1)
+text(t1, pretty = 0)
+```
 
 
