@@ -1,0 +1,57 @@
+---
+title: "Classification Models"
+author: "Emmett Powers"
+date: "12/7/2019"
+output: html_document
+---
+Subsetting train and test data: 
+```{r}
+library(tidyverse)
+s.size <- floor(0.75 * nrow(rdata.clean))
+set.seed(10)
+train.data <- sample(seq_len(nrow(rdata.clean)), size = s.size)
+train <- rdata.clean[train.data, ]
+test <- rdata.clean[-train.data, ]
+
+```
+
+Ordinal Logistic Regression: 
+```{r}
+library(MASS)
+class <- ordered(train$RestaurantsPriceRange2, levels= c("1", "2", "3", "4")) 
+train$class <- class
+# m1 <- polr(class ~.,  data = train,  Hess = TRUE) this makes r crash
+
+```
+
+Classification tree: 
+```{r}
+library(tree)
+train$class = NULL
+t1 <- tree(RestaurantsPriceRange2 ~stars + review_count + latitude + longitude, data = train)
+plot(t1)
+text(t1, pretty = 0)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
