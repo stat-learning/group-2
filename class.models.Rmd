@@ -25,7 +25,8 @@ names(food_boot)
 rforest_ind <- sample(1:ncol(food_boot),
                       size = m, replace = FALSE)
 rforest_ind
-food_rforest <- food_boot[ , c(rforest_ind),  ]
+food_rforest <- food_boot[, c(, rforest_ind),  ]
+tree(RestaurantsPriceRange2 ~., data = food_rforest)
 ```
 
 Making smol datasts: 
@@ -64,6 +65,8 @@ m3 <- rpart(RestaurantsPriceRange2 ~ stars + review_count + latitude + longitude
 Subsetting train and test data: 
 ```{r}
 library(tidyverse)
+class <- ordered(rdata.clean$RestaurantsPriceRange2, levels= c("1", "2", "3", "4")) 
+rdata.clean$class <- class
 s.size <- floor(0.75 * nrow(rdata.clean))
 set.seed(10)
 train.data <- sample(seq_len(nrow(rdata.clean)), size = s.size)
@@ -75,13 +78,25 @@ test <- rdata.clean[-train.data, ]
 OLR 
 ```{r}
 library(MASS)
-class2 <- ordered(train$RestaurantsPriceRange2, levels= c("1", "2", "3", "4")) 
-train$class2 <- class2
-m2 <- polr(class2 ~ stars + review_count + latitude + longitude,  data = train,  Hess = TRUE) #this makes r crash
+m2 <- polr(class ~ stars + review_count + latitude + longitude,  data = train,  Hess = TRUE) #this makes r crash
 m2
-
-class3 <- ordered(test$RestaurantsPriceRange2, levels= c("1", "2", "3", "4")) 
-test$class3 <- class3
 predicted.price <- predict(m2, newdata = test)
+predicted.price
 
+# misclassification rate: 
+
+yp <- predicted.price
+yt <- test$class
+
+mcr.table <- table(yp,yt)
+1-sum(diag(mcr.table))/sum(mcr.table)
 ```
+
+LM 
+```{r}
+lm.train <- na.omit(train)
+lin.mod <- lm(RestaurantsPriceRange2 ~ stars + review_count + latitude + longitude,  data = lm.train)
+lin.mod.test <- predict(lin.mod, newdata = test)
+```
+
+
