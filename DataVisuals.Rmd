@@ -1,0 +1,97 @@
+---
+ztitle: "DataVisualization"
+author: "Giorlando Ramirez"
+date: "12/8/2019"
+output: pdf_document
+---
+
+Preparing Data:
+```{r}
+library(rlist)
+library(dplyr)
+library(tidyverse)
+library(jsonlite)
+
+business <- stream_in(file("business.json"))
+clean.business <- business
+clean.business$Restaurant <- 0 
+new.business <- mutate(clean.business, Restaurant=grepl("Restaurants", clean.business$categories))
+clean.yelp <- filter(new.business, Restaurant == "TRUE")
+attribute <- clean.yelp$attributes
+restaurant_data <- clean.yelp
+restaurant_data$attributes <- NULL
+restaurant_data <- cbind(restaurant_data, attribute)
+voi <- c("name", "city", "state", "latitude", "longitude", "stars", "review_count", "RestaurantsTakeOut", 
+         "RestaurantsPriceRange2", "OutdoorSeating", "Alcohol", "categories")
+rdata <- subset(restaurant_data, select=voi)
+rdata.clean <- rdata[complete.cases(rdata),]
+```
+
+Subsetting train and test data: 
+```{r}
+library(tidyverse)
+class <- ordered(rdata.clean$RestaurantsPriceRange2, levels= c("1", "2", "3", "4")) 
+rdata.clean$class <- class
+s.size <- floor(0.75 * nrow(rdata.clean))
+set.seed(10)
+train.data <- sample(seq_len(nrow(rdata.clean)), size = s.size)
+train <- rdata.clean[train.data, ]
+test <- rdata.clean[-train.data, ]
+
+```
+
+LM 
+```{r}
+lm.train <- na.omit(train)
+lin.mod <- lm(RestaurantsPriceRange2 ~ stars + review_count + latitude + longitude,  data = lm.train)
+
+#Predicting Price
+predicted.price <- predict(lin.mod, newdata = test)
+predicted.2 <- round(predicted.price, digits = 0)
+
+mcr2 <- table(predicted.2,yt)
+1-sum(diag(mcr2))/sum(mcr2)
+
+# Misclassification rate: 
+yp <- predicted.price
+yt <- test$RestaurantsPriceRange2
+
+na.omit(table)
+
+table <- data.frame(yp,yt)
+
+mcr.table <- table(yp,yt)
+
+1-sum(diag(mcr.table))/sum(mcr.table)
+
+ggplot(table, aes(x=yt, y=yp)) + 
+  geom_point()+
+  labs(title="Predicted v Actual: Linear Model",
+       x="Actual Price Range", y = "Predicted Price Range") +
+  theme_classic()
+```
+
+```{r}
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(sf)
+library(ggplot2)
+library(maps)
+library(tools)
+
+
+
+world <- ne_countries(scale = "medium", returnclass = "sf")
+class(world)
+states <- st_as_sf(map("state", plot = FALSE, fill = TRUE))
+
+
+ggplot(data = world) +
+    geom_sf(data = states, fill = NA) +
+    geom_point(data = rdata.clean, aes( x = longitude, y = latitude), size = 3, shape = 23, fill = "blue") +
+  coord_sf(xlim = c(-130, -60), ylim = c(23, 54), expand = FALSE) +
+  labs(title="Restaurant Data Mapped",
+       x="Longitude", y = "Latitude")
+
+```
+
