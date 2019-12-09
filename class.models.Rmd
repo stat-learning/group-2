@@ -4,6 +4,69 @@ author: "Emmett Powers"
 date: "12/7/2019"
 output: html_document
 ---
+
+Classification tree: 
+```{r}
+library(rpart)
+library(rpart.plot)
+model2 <- rpart(RestaurantsPriceRange2 ~ stars + review_count + latitude + longitude, data = rdata.clean,
+  control = rpart.control(minsplit = 2))
+plot1<-prp(model2)
+```
+
+
+Random Forest: 
+```{r}
+boot_ind <- sample(1:nrow(rdata.clean), 
+                   replace = TRUE)
+food_boot <- rdata.clean[boot_ind, ]
+m <- sqrt(ncol(food_boot))
+names(food_boot)
+rforest_ind <- sample(1:ncol(food_boot),
+                      size = m, replace = FALSE)
+rforest_ind
+food_rforest <- food_boot[ , c(rforest_ind),  ]
+```
+
+```{r message = FALSE, fig.height=5, fig.align="center"}
+m3 <- rpart(rdata.clean$RestaurantsPriceRange2 ~ ., data = food_rforest)
+plot(t1)
+text(t1, pretty = 0)
+```
+
+Random Forest 2: 
+```{r}
+boot_ind2 <- sample(1:nrow(tinysubset), 
+                   replace = TRUE)
+food_boot2 <- rdata.clean[boot_ind2, ]
+m2 <- sqrt(ncol(food_boot2))
+names(food_boot2)
+rforest_ind2 <- sample(1:ncol(food_boot2),
+                      size = m, replace = FALSE)
+rforest_ind2
+food_rforest2 <- food_boot2[ , c(rforest_ind2),  ]
+```
+
+```{r message = FALSE, fig.height=5, fig.align="center"}
+m3 <- rpart(rdata.clean$RestaurantsPriceRange2 ~ ., data = food_rforest)
+plot(t1)
+text(t1, pretty = 0)
+```
+
+Making smol datasts: 
+```{r}
+s.size2 <- floor(0.05 * nrow(train))
+set.seed(11)
+tinysubset <- sample(seq_len(nrow(train)), size = s.size2)
+smol.data <- rdata.clean[tinysubset,]
+
+s.size3 <- floor(0.0005 * nrow(train))
+set.seed(12)
+tinysubset2 <- sample(seq_len(nrow(train)), size = s.size3)
+smoler.data <- rdata.clean[tinysubset2,]
+
+```
+
 Subsetting train and test data: 
 ```{r}
 library(tidyverse)
@@ -20,41 +83,6 @@ Ordinal Logistic Regression:
 library(MASS)
 class <- ordered(train$RestaurantsPriceRange2, levels= c("1", "2", "3", "4")) 
 train$class <- class
-# m1 <- polr(class ~.,  data = train,  Hess = TRUE) this makes r crash
+m1 <- polr(class ~ stars + review_count + latitude + longitude,  data = smoler.data,  Hess = TRUE) #this makes r crash
 
 ```
-
-Classification tree: 
-```{r}
-library(tree)
-train$class = NULL
-t1 <- tree(RestaurantsPriceRange2 ~stars + review_count + latitude + longitude, data = train)
-plot(t1)
-text(t1, pretty = 0)
-```
-
-Random Forest: 
-
-```{r}
-boot_ind <- sample(1:nrow(rdata.clean), 
-                   replace = TRUE)
-food_boot <- rdata.clean[boot_ind, ]
-```
-
-```{r}
-m <- sqrt(ncol(food_boot))
-names(food_boot)
-rforest_ind <- sample(1:ncol(food_boot),
-                      size = m, replace = FALSE)
-rforest_ind
-food_rforest <- food_boot[ , c(rforest_ind),  ]
-```
-
-```{r message = FALSE, fig.height=5, fig.align="center"}
-library(tree)
-t1 <- tree(rdata.clean$RestaurantsPriceRange2 ~ ., data = food_rforest)
-plot(t1)
-text(t1, pretty = 0)
-```
-
-
