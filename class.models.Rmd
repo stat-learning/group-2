@@ -12,21 +12,32 @@ library(rpart.plot)
 model2 <- rpart(RestaurantsPriceRange2 ~ stars + review_count + latitude + longitude, data = rdata.clean,
   control = rpart.control(minsplit = 2))
 plot1<-prp(model2)
+
 ```
 
 
 Random Forest: 
 ```{r}
-boot_ind <- sample(1:nrow(rdata.clean), 
+numeric.yelp <- subset(rdata.clean, select =  c(4, 5, 6, 7, 9))
+even.better <- as.numeric(unlist(numeric.yelp))
+even.better2 <- na.omit(even.better)
+boot_ind <- sample(1:nrow(even.better2), 
                    replace = TRUE)
-food_boot <- rdata.clean[boot_ind, ]
-m <- sqrt(ncol(food_boot))
+food_boot <- even.better2[boot_ind, ]
+m <- sqrt(ncol(food_boot)) + 1
 names(food_boot)
 rforest_ind <- sample(1:ncol(food_boot),
                       size = m, replace = FALSE)
 rforest_ind
-food_rforest <- food_boot[, c(, rforest_ind),  ]
-tree(RestaurantsPriceRange2 ~., data = food_rforest)
+set.seed(22)
+food_rforest <- food_boot[, c(rforest_ind, 5) ]
+library(rpart)
+boi <- rpart(RestaurantsPriceRange2 ~ ., data = food_rforest)
+library(rpart.plot)
+plot2 <- prp(boi)
+library(randomForest)
+set.seed(33)
+randomForest(RestaurantsPriceRange2 ~ ., data = food_rforest)
 ```
 
 Making smol datasts: 
@@ -52,8 +63,10 @@ m2 <- sqrt(ncol(food_boot2))
 names(food_boot2)
 rforest_ind2 <- sample(1:ncol(food_boot2),
                       size = m, replace = FALSE)
+# trouble comes from up here.^ it's excluding price range as a column so we can't use tree() or rpart()to find it yet
 rforest_ind2
-food_rforest2 <- food_boot2[ , c(rforest_ind2),  ]
+food_rforest2 <- food_boot2[ , c(rforest_ind2, 9)  ]
+RestaurantsPriceRange2 ~ stars + review_count + latitude + longitude, data 
 ```
 
 ```{r}
