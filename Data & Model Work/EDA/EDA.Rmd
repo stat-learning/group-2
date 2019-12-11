@@ -34,8 +34,6 @@ clean.business <- business
 clean.business$Restaurant <- 0 
 new.business <- mutate(clean.business, Restaurant=grepl("Restaurants", clean.business$categories))
 clean.yelp <- filter(new.business, Restaurant == "TRUE")
-# not sure how this worked but if it ain't broke don't fix it 
-## Removing attribute label from data to allow further cleaning
 attribute <- clean.yelp$attributes
 restaurant_data <- clean.yelp
 restaurant_data$attributes <- NULL
@@ -63,6 +61,7 @@ rdata.clean <- rdata[complete.cases(rdata),]
 # Univariate Analysis of Response
 ```{r}
 pricerange <- strtoi(rdata$RestaurantsPriceRange2)
+pricerange <- as.factor(rdata$RestaurantsPriceRange2)
 summary(pricerange)
 hist(pricerange)
 boxplot(pricerange)
