@@ -52,6 +52,14 @@ predicted.2 <- round(predicted.price, digits = 0)
 mcr2 <- table(predicted.2,yt)
 1-sum(diag(mcr2))/sum(mcr2)
 
+table_2 <- data.frame(predicted.2, yt)
+
+ggplot(table_2, aes(x=yt, y=predicted.2)) + 
+  geom_point()+
+  labs(title="Predicted v Actual: Linear Model (W/ Rounding)",
+       x="Actual Price Range", y = "Predicted Price Range") +
+  theme_classic()
+
 # Misclassification rate: 
 yp <- predicted.price
 yt <- test$RestaurantsPriceRange2
@@ -79,8 +87,6 @@ library(ggplot2)
 library(maps)
 library(tools)
 
-
-
 world <- ne_countries(scale = "medium", returnclass = "sf")
 class(world)
 states <- st_as_sf(map("state", plot = FALSE, fill = TRUE))
@@ -92,6 +98,5 @@ ggplot(data = world) +
   coord_sf(xlim = c(-130, -60), ylim = c(23, 54), expand = FALSE) +
   labs(title="Restaurant Data Mapped",
        x="Longitude", y = "Latitude")
-
 ```
 

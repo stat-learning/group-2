@@ -2,8 +2,30 @@
 title: "Classification Models"
 author: "Emmett Powers"
 date: "12/7/2019"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
+
+Preparing Data:
+```{r}
+library(rlist)
+library(dplyr)
+library(tidyverse)
+library(jsonlite)
+
+business <- stream_in(file("business.json"))
+clean.business <- business
+clean.business$Restaurant <- 0 
+new.business <- mutate(clean.business, Restaurant=grepl("Restaurants", clean.business$categories))
+clean.yelp <- filter(new.business, Restaurant == "TRUE")
+attribute <- clean.yelp$attributes
+restaurant_data <- clean.yelp
+restaurant_data$attributes <- NULL
+restaurant_data <- cbind(restaurant_data, attribute)
+rdata <- subset(restaurant_data, select=voi)
+rdata.clean <- rdata[complete.cases(rdata),]
+```
 
 Classification tree: 
 ```{r}
@@ -85,8 +107,10 @@ predicted.price
 
 # misclassification rate: 
 
+plot(yp,yt)
+
 yp <- predicted.price
-yt <- test$class
+yt <- test$RestaurantsPriceRange2
 
 mcr.table <- table(yp,yt)
 1-sum(diag(mcr.table))/sum(mcr.table)
@@ -98,5 +122,3 @@ lm.train <- na.omit(train)
 lin.mod <- lm(RestaurantsPriceRange2 ~ stars + review_count + latitude + longitude,  data = lm.train)
 lin.mod.test <- predict(lin.mod, newdata = test)
 ```
-
-
