@@ -1,9 +1,6 @@
 ---
 title: "Technical Report: Predicting Yelp Price Ranges"
-author:
--"Josh Dey"
--"Emmett Powers"
--"Giorlando Ramirez"
+author: "Josh Dey, Emmett Powers, & Giorlando Ramirez"
 date: "12/10/2019"
 output: pdf_document
 ---
@@ -136,26 +133,42 @@ Now we have d1, our final data set which we use to analyze the response & predic
 d1$PriceRange <- as.numeric(d1$PriceRange)
 ggplot(d1, aes(x=PriceRange)) + 
   geom_histogram(color="black", fill="white") +
-  xlab("Restaurant Price Range (# of $)") +
+  xlab("Restaurant Rrice Range (# of $)") +
   ylab("Number of Restaurants in Range")
 ```
 
+Here we see that our response variable (the price range) is heavily right skewed, with a large concentration of observations around 2 (about 53%). This is worth noting, as we might need to address it in our model construction.
 
 ## Predictors
 ```{r}
+## Numerical 
 ggplot(d1, aes(x=stars)) + 
   geom_histogram(color="black", fill="white")
 
-d1$Alc <- as.numeric(d1$Alc)
-ggplot(d1, aes(x=Alc)) + 
+ggplot(d1, aes(x=review_count)) + 
   geom_histogram(color="black", fill="white")
+
+## Categorical
+ggplot(d1, aes(x=Attire)) + 
+  geom_bar(color="black", fill="white")
+
+ggplot(d1, aes(x=Takeout)) + 
+  geom_bar()
+
+ggplot(d1, aes(x=OutdoorSeating)) + 
+  geom_bar()
+
+ggplot(d1, aes(x=Alc)) + 
+  geom_bar()
 ```
 
+### Numerical
+There are a couple of interesting things about our predictive variables. The stars variable has a slightly left skewed distribution, with most restaurants falling under the 3.5 - 4 star rating. Review count appears to be centered around a couple of reviews, with very major outliers. 
+
+### Categorical
+It is difficult to make any meaningful assertions from a cursory look at the categorical, however there are a few things worth noting. Attire is heavily concetrated around the first category, "casual", which is intuitive since most restaurants are casual walk-in locations. Take out is also very heavily concentrated around 1 (which means they do Take Out), which is again intuitive since we'd expect most places to do take out. Outdoor seating has a fairly even split, though there are a larger number of restaurants that do not have it available. And alcohol has a similar amount under the categories of no alcohol & full bar, with a fairly smaller number under "beer and wine".
 
 # Modeling
-Construct (descriptive and/or predictive) (classification and/or regression) models that address your research questions. You are encouraged to fit many different classes of models and see how they compare in terms the bias/variance tradeoff (do you have a Rashomon effect going on?). Also be sure to guard against overfitting through cross-validation or shrinkage/penalization (don’t forget about ridge regression and the lasso).
-
-This will be the most extensive section and will include your results as well.
 
 ## Descriptive Classification Tree 
 ```{r}
@@ -186,8 +199,10 @@ Though this is a classification exercise, the first model we developed was a lin
 
 ```{r}
 lm.train <- train[complete.cases(train),]
-lm.train$PriceRange <- as.numeric(lm.train$PriceRange)
-lin.mod <- lm(PriceRange ~.,  data = lm.train)
+lm.train$RestaurantsPriceRange2 <- as.numeric(lm.train$RestaurantsPriceRange2)
+lin.mod <- lm(RestaurantsPriceRange2 ~ stars + review_count + latitude + 
+                longitude + RestaurantsAttire +
+                RestaurantsTakeOut + OutdoorSeating + Alc,  data = lm.train)
 
 ## Predicting Price
 predicted.price <- predict(lin.mod, newdata = test)
@@ -195,16 +210,18 @@ predicted.price.rounded <- round(predicted.price, digits = 0)
 yp <- predicted.price.rounded
 
 ## Misclassification rate:
-yt <- test$PriceRange
+yt <- test$RestaurantsPriceRange2
 
 mcr <- table(predicted.price.rounded,yt)
 
-1-sum(diag(mcr))/sum(mcr)
+1-sum(diag(mcr2))/sum(mcr2)
 ```
 
-With this model we find a misclassification rate of 27.62%. While this modeling method is not necessarily made for this exercise, it is quite robust since it identifies just over 70% of restaurants correctly. However, we wished to further develop our understanding of the relationship between restaurant prices and the variables, so we continue our explorations with an Ordinal Regression, which should more aptly tackle the classification nature of this problem.
+A couple of things are worth noting about our process in building this model. First, we aimed to address the issue around the right skewedness of the data by performing some transformations. However, none of these changes significantly improved the predictive strength of the model, thus we chose to not keep any of the transformations. Regarding the explanatory variables we chose, we also tried a variety of models with different variables and opted to choose this one.
 
-## Ordignal Regression
+With this model we find a misclassification rate of 29.49%. While this modeling method is not necessarily made for this exercise, it is quite robust since it identifies just over 70% of restaurant price ranges correctly. However, we wished to further develop our understanding of the relationship between restaurant prices and the variables, so we continue our explorations with an Ordinal Regression, which should more aptly tackle the classification nature of this problem.
+
+## Ordinal Regression
 
 ```{r}
 class <- ordered(d1$PriceRange, levels= c("1", "2", "3", "4")) 
