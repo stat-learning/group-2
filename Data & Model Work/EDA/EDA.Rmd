@@ -72,11 +72,15 @@ A use of the summary function on our response function, price range, yields the 
 
 First, let's take a look at the correlation between our data's numeric variables.  
 ```{r}
-numeric.vars <- c("latitude", "longitude", "stars", "review_count", "RestaurantsPriceRange2")
+numeric.vars <- rdata %>% 
+  c("latitude", "longitude", "stars", "review_count", "RestaurantsPriceRange2")
 numeric.yelp <- subset(rdata, select = numeric.vars)
 cor(numeric.yelp)
 ```
 None of the numerical variables have any significant correlations, so our data is relatively free of covariance. This is good, because it suggests we selected variables that will all have independent effects on determining price when we put them into a model. 
 
+```{r}
+
+```
 
 
