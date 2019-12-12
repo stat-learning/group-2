@@ -106,6 +106,8 @@ ggplot(table, aes(x=yt, y=yp)) +
 
 ```
 
+
+Map
 ```{r}
 library(rnaturalearth)
 library(rnaturalearthdata)
@@ -127,3 +129,7 @@ ggplot(data = world) +
        x="Longitude", y = "Latitude")
 ```
 
+# Introduction
+Overview of the setting of the data, existing theories/models (particularly if you are working in a descriptive/inferential setting), and your research questions.
+
+In this project we want to use a large dataset provided by Yelp to predict restaurant prices. Economic intuition would have it that there are certain things restaurants might sell and/or provide that would make them more or less expensive, a prime example being the sale of alcohol. Thus, with this project we wish to put this intuition to the test. The Yelp dataset is comprised of many individual restaurant observations with variables that are likely determinants of the restaurants prices, such as whether they provide outdoor seating or the expected attire, so with this data we go about building a variety of models which might predict a given restaurant's price range.
