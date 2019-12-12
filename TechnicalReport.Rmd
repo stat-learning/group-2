@@ -103,17 +103,34 @@ rdata.clean$Alc <- 0
 lvlone <- c("'none'", "u'none'")
 lvltwo <- c("'beer_and_wine'", "u'beer_and_wine'")
 lvlthree <- c( "'full_bar'", "u'full_bar'")
-rdata.clean$Alc <- ordered(rdata.clean$Alcohol, levels = lvlone, lvltwo, lvlthree)
+rdata.clean$Alc <- ordered(rdata.clean$Alcohol, levels = c(lvlone, lvltwo, lvlthree))
 rdata.clean$Alc <- as.numeric(rdata.clean$Alc)
-rdata.clean$Alc <- rdata.clean$Alc %>% replace_na(3)
+rdata.clean$Alc[rdata.clean$Alc == 2] <- 1
+rdata.clean$Alc[rdata.clean$Alc == 3] <- 2
+rdata.clean$Alc[rdata.clean$Alc == 4] <- 2
+rdata.clean$Alc[rdata.clean$Alc == 5] <- 3
+rdata.clean$Alc[rdata.clean$Alc == 6] <- 3
+
+# Doing the same for Attire; had to do it differently for some reason
+rdata.clean$RestaurantsAttire[rdata.clean$RestaurantsAttire == "'casual'"] <- 1
+rdata.clean$RestaurantsAttire[rdata.clean$RestaurantsAttire == "u'casual'"] <- 1
+rdata.clean$RestaurantsAttire[rdata.clean$RestaurantsAttire == "'dressy'"] <- 2
+rdata.clean$RestaurantsAttire[rdata.clean$RestaurantsAttire == "u'dressy'"] <- 2
+rdata.clean$RestaurantsAttire[rdata.clean$RestaurantsAttire == "'formal'"] <- 3
+rdata.clean$RestaurantsAttire[rdata.clean$RestaurantsAttire == "u'formal'"] <- 3
+
+rdata.cleaner <- na.omit(rdata.clean)
+
+d1 <- rdata.cleaner[c(-1 , -2, -3, -11, -12 )]
+
 ```
 
-Now we have our final data set which we use to analyze the response & predictor variables, as well as for the construction of our models.
+Now we have d1, our final data set which we use to analyze the response & predictor variables, as well as for the construction of our models.
 
 ## Response Variable Analysis
 ```{r}
-rdata.clean$RestaurantsPriceRange2 <- as.numeric(rdata.clean$RestaurantsPriceRange2)
-ggplot(rdata.clean, aes(x=RestaurantsPriceRange2)) + 
+d1$RestaurantsPriceRange2 <- as.numeric(d1$RestaurantsPriceRange2)
+ggplot(d1, aes(x=RestaurantsPriceRange2)) + 
   geom_histogram(color="black", fill="white") +
   xlab("Restaurant Rrice Range (# of $)") +
   ylab("Number of Restaurants in Range")
@@ -122,10 +139,10 @@ ggplot(rdata.clean, aes(x=RestaurantsPriceRange2)) +
 
 ## Predictors
 ```{r}
-ggplot(rdata.clean, aes(x=stars)) + 
+ggplot(d1, aes(x=stars)) + 
   geom_histogram(color="black", fill="white")
 
-ggplot(rdata.clean, aes(x=Alc)) + 
+ggplot(d1, aes(x=Alc)) + 
   geom_histogram(color="black", fill="white")
 ```
 
@@ -140,13 +157,13 @@ This will be the most extensive section and will include your results as well.
 Before building our supervised learning models, we must first create our training and test sub datasets.
 
 ```{r}
-#class <- ordered(rdata.clean$RestaurantsPriceRange2, levels= c("1", "2", "3", "4")) 
-#rdata.clean$class <- class
-s.size <- floor(0.75 * nrow(rdata.clean))
+#class <- ordered(d1$RestaurantsPriceRange2, levels= c("1", "2", "3", "4")) 
+#d1$class <- class
+s.size <- floor(0.75 * nrow(d1))
 set.seed(10)
-train.data <- sample(seq_len(nrow(rdata.clean)), size = s.size)
-train <- rdata.clean[train.data, ]
-test <- rdata.clean[-train.data, ]
+train.data <- sample(seq_len(nrow(d1)), size = s.size)
+train <- d1[train.data, ]
+test <- d1[-train.data, ]
 ```
 
 ## Linear Model
@@ -170,10 +187,10 @@ yt <- test$RestaurantsPriceRange2
 
 mcr <- table(predicted.price.rounded,yt)
 
-1-sum(diag(mcr2))/sum(mcr2)
+1-sum(diag(mcr))/sum(mcr)
 ```
 
-With this model we find a misclassification rate of 29.49%. While this modeling method is not necessarily made for this exercise, it is quite robust since it identifies just over 70% of restaurants correctly. However, we wished to further develop our understanding of the relationship between restaurant prices and the variables, so we continue our explorations with an Ordinal Regression, which should more aptly tackle the classification nature of this problem.
+With this model we find a misclassification rate of 27.62%. While this modeling method is not necessarily made for this exercise, it is quite robust since it identifies just over 70% of restaurants correctly. However, we wished to further develop our understanding of the relationship between restaurant prices and the variables, so we continue our explorations with an Ordinal Regression, which should more aptly tackle the classification nature of this problem.
 
 ## Ordignal Regression
 
