@@ -123,6 +123,11 @@ ggplot(rdata.clean, aes(x=RestaurantsPriceRange2)) +
 ggplot(rdata.clean, aes(x=stars)) + 
   geom_histogram(color="black", fill="white")
 
+## Note to Emmett: notice how the distrubution is super heavy to classification # 3? I think the order is inversed
+## looks like level one ended up with the number 3. Just fyi idk if this is really that much of an issue.
+ggplot(rdata.clean, aes(x=Alc)) + 
+  geom_histogram(color="black", fill="white")
+
 ```
 
 
@@ -133,7 +138,6 @@ Construct (descriptive and/or predictive) (classification and/or regression) mod
 This will be the most extensive section and will include your results as well.
 
 ## Preparing the Data: Training and Test
-
 ```{r}
 library(tidyverse)
 #class <- ordered(rdata.clean$RestaurantsPriceRange2, levels= c("1", "2", "3", "4")) 
@@ -146,18 +150,14 @@ test <- rdata.clean[-train.data, ]
 ```
 
 ## Linear Model
-
 ```{r}
 library(rcompanion)
 
 lm.train <- train[complete.cases(train),]
 lm.train$RestaurantsPriceRange2 <- as.numeric(lm.train$RestaurantsPriceRange2)
-lm.train$RestaurantsPriceRange2 <- lm.train$RestaurantsPriceRange2
 lin.mod <- lm(RestaurantsPriceRange2 ~ stars + review_count + latitude + 
                 longitude + RestaurantsAttire +
                 RestaurantsTakeOut + OutdoorSeating + Alc,  data = lm.train)
-
-yt <- test$RestaurantsPriceRange2
 
 ## Linear Model w/o Rounding
 
@@ -166,32 +166,19 @@ predicted.price <- predict(lin.mod, newdata = test)
 yp_1 <- predicted.price
 
 ## Misclassification rate:
-table <- data.frame(yp_1,yt)
-mcr.table <- table(yp_1,yt)
+yt <- test$RestaurantsPriceRange2
 
-1-sum(diag(mcr.table))/sum(mcr.table)
+mcr_1 <- table(yp_1,yt)
 
-ggplot(table, aes(x=yt, y=yp)) + 
-  geom_point()+
-  labs(title="Predicted v Actual: Linear Model",
-       x="Actual Price Range", y = "Predicted Price Range") +
-  theme_classic()
+1 - sum(diag(mcr_1))/sum(mcr_1)
 
-
-## Linear Model w/o rounding
+## Linear Model w/ rounding
 predicted.price.rounded <- round(predicted.price, digits = 0)
 yp <- predicted.price.rounded
 
-table_2 <- data.frame(predicted.price.rounded, yt)
 mcr2 <- table(predicted.price.rounded,yt)
+
 1-sum(diag(mcr2))/sum(mcr2)
-
-ggplot(table_2, aes(x=yt, y=predicted.price.rounded)) + 
-  geom_point()+
-  labs(title="Predicted v Actual: Linear Model (W/ Rounding)",
-       x="Actual Price Range", y = "Predicted Price Range") +
-  theme_classic()
-
 ```
 
 
@@ -202,4 +189,5 @@ Review the results generated above and sythensize them in the context from which
 
 
 # References
-At minimum, this will contain the full citation for your data set. If you reference existing analyses, they should be cited here as well.
+
+“Yelp Open Dataset.” Yelp Dataset, 2019, www.yelp.com/dataset.
