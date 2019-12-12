@@ -65,7 +65,7 @@ rdata <- subset(restaurant_data, select=voi)
 ```
 
 ## Missingness
-Now we look at the missingness in the data.
+Now we look at the missingness in the data, and we decouple it into response and some predictor variables.
 
 ```{r, cache = TRUE}
 ## Missingness when including all of the restaurant observations
@@ -82,7 +82,6 @@ dresscode <- data.frame(rdata$RestaurantsAttire)
 missmap(outdoorseating)
 missmap(alcohol)
 missmap(dresscode)
-
 ```
 
 The missingness maps reveal that though our overall missingness is minimal, there are a couple things worth noting. In terms of the response variable, it is only 12% which is not too concerning since we still have a value for the major of observations. Further, we notice that the missingness is concentrated around the more niche variables, which are the determinants of the price range. This would be an issue if we considered there to exist a systematic issue in the missingness occurring, however we do not think this is the case. We believe the missingness is randomly distributed, so we assume it is not problematic to simply get rid of observations which do not have values for all of our variables. Thus, the final data we use will contain only complete observations. Now that we have a cursory look at the overall data and know that we will get rid of incomplete observations, we turn to preparing it for a survey of the response and predictive variables.
@@ -109,30 +108,26 @@ rdata.clean$Alc <- as.numeric(rdata.clean$Alc)
 rdata.clean$Alc <- rdata.clean$Alc %>% replace_na(3)
 ```
 
-Thus, here we have our final data set which we use to analyze the response & predictor variables, as well as for the construction of our models.
+Now we have our final data set which we use to analyze the response & predictor variables, as well as for the construction of our models.
 
 ## Response Variable Analysis
 ```{r}
-
+rdata.clean$RestaurantsPriceRange2 <- as.numeric(rdata.clean$RestaurantsPriceRange2)
 ggplot(rdata.clean, aes(x=RestaurantsPriceRange2)) + 
-  geom_histogram(color="black", fill="white")
-
+  geom_histogram(color="black", fill="white") +
+  xlab("Restaurant Rrice Range (# of $)") +
+  ylab("Number of Restaurants in Range")
 ```
 
 
 ## Predictors
 ```{r}
-
 ggplot(rdata.clean, aes(x=stars)) + 
   geom_histogram(color="black", fill="white")
 
-## Note to Emmett: notice how the distrubution is super heavy to classification # 3? I think the order is inversed
-## looks like level one ended up with the number 3. Just fyi idk if this is really that much of an issue.
 ggplot(rdata.clean, aes(x=Alc)) + 
   geom_histogram(color="black", fill="white")
-
 ```
-
 
 
 # Modeling
@@ -141,6 +136,9 @@ Construct (descriptive and/or predictive) (classification and/or regression) mod
 This will be the most extensive section and will include your results as well.
 
 ## Preparing the Data: Training and Test
+
+Before building our supervised learning models, we must first create our training and test sub datasets.
+
 ```{r}
 #class <- ordered(rdata.clean$RestaurantsPriceRange2, levels= c("1", "2", "3", "4")) 
 #rdata.clean$class <- class
@@ -152,6 +150,9 @@ test <- rdata.clean[-train.data, ]
 ```
 
 ## Linear Model
+
+Though this is a classification exercise, the first model we developed was a linear model with rounding, as follows:
+
 ```{r}
 lm.train <- train[complete.cases(train),]
 lm.train$RestaurantsPriceRange2 <- as.numeric(lm.train$RestaurantsPriceRange2)
@@ -159,33 +160,28 @@ lin.mod <- lm(RestaurantsPriceRange2 ~ stars + review_count + latitude +
                 longitude + RestaurantsAttire +
                 RestaurantsTakeOut + OutdoorSeating + Alc,  data = lm.train)
 
-## Linear Model w/o Rounding
-
 ## Predicting Price
 predicted.price <- predict(lin.mod, newdata = test)
-yp_1 <- predicted.price
+predicted.price.rounded <- round(predicted.price, digits = 0)
+yp <- predicted.price.rounded
 
 ## Misclassification rate:
 yt <- test$RestaurantsPriceRange2
 
-mcr_1 <- table(yp_1,yt)
-
-1 - sum(diag(mcr_1))/sum(mcr_1)
-
-## Linear Model w/ rounding
-predicted.price.rounded <- round(predicted.price, digits = 0)
-yp <- predicted.price.rounded
-
-mcr2 <- table(predicted.price.rounded,yt)
+mcr <- table(predicted.price.rounded,yt)
 
 1-sum(diag(mcr2))/sum(mcr2)
 ```
 
+With this model we find a misclassification rate of 29.49%. While this modeling method is not necessarily made for this exercise, it is quite robust since it identifies just over 70% of restaurants correctly. However, we wished to further develop our understanding of the relationship between restaurant prices and the variables, so we continue our explorations with an Ordinal Regression, which should more aptly tackle the classification nature of this problem.
+
+## Ordignal Regression
+
+## Classification Tree
 
 
 # Discussion
 Review the results generated above and sythensize them in the context from which the data originated. What do the results tell your about your original research question? Are there any weaknesses that you see in your analysis? What additional questions would you explore next?
-
 
 # References
 
