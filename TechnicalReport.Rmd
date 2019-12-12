@@ -22,6 +22,7 @@ library(dplyr)
 library(tidyverse)
 library(jsonlite)
 library(rcompanion)
+library(MASS)
 ```
 
 
@@ -110,6 +111,7 @@ rdata.clean$Alc[rdata.clean$Alc == 3] <- 2
 rdata.clean$Alc[rdata.clean$Alc == 4] <- 2
 rdata.clean$Alc[rdata.clean$Alc == 5] <- 3
 rdata.clean$Alc[rdata.clean$Alc == 6] <- 3
+# rdata.clean$Alc <- as.factor(rdata.clean$Alc)
 
 # Doing the same for Attire; had to do it differently for some reason
 rdata.clean$RestaurantsAttire[rdata.clean$RestaurantsAttire == "'casual'"] <- 1
@@ -118,10 +120,12 @@ rdata.clean$RestaurantsAttire[rdata.clean$RestaurantsAttire == "'dressy'"] <- 2
 rdata.clean$RestaurantsAttire[rdata.clean$RestaurantsAttire == "u'dressy'"] <- 2
 rdata.clean$RestaurantsAttire[rdata.clean$RestaurantsAttire == "'formal'"] <- 3
 rdata.clean$RestaurantsAttire[rdata.clean$RestaurantsAttire == "u'formal'"] <- 3
+# rdata.clean$RestaurantsAttire <- as.factor(rdata.clean$RestaurantsAttire)
 
 rdata.cleaner <- na.omit(rdata.clean)
-
 d1 <- rdata.cleaner[c(-1 , -2, -3, -11, -12 )]
+d1 <- d1 %>% rename(Takeout = RestaurantsTakeOut, PriceRange = RestaurantsPriceRange2, Attire = RestaurantsAttire)
+d1$Attire[d1$Attire == "None"] <- 1
 
 ```
 
@@ -129,10 +133,10 @@ Now we have d1, our final data set which we use to analyze the response & predic
 
 ## Response Variable Analysis
 ```{r}
-d1$RestaurantsPriceRange2 <- as.numeric(d1$RestaurantsPriceRange2)
-ggplot(d1, aes(x=RestaurantsPriceRange2)) + 
+d1$PriceRange <- as.numeric(d1$PriceRange)
+ggplot(d1, aes(x=PriceRange)) + 
   geom_histogram(color="black", fill="white") +
-  xlab("Restaurant Rrice Range (# of $)") +
+  xlab("Restaurant Price Range (# of $)") +
   ylab("Number of Restaurants in Range")
 ```
 
@@ -142,6 +146,7 @@ ggplot(d1, aes(x=RestaurantsPriceRange2)) +
 ggplot(d1, aes(x=stars)) + 
   geom_histogram(color="black", fill="white")
 
+d1$Alc <- as.numeric(d1$Alc)
 ggplot(d1, aes(x=Alc)) + 
   geom_histogram(color="black", fill="white")
 ```
@@ -152,13 +157,22 @@ Construct (descriptive and/or predictive) (classification and/or regression) mod
 
 This will be the most extensive section and will include your results as well.
 
+## Descriptive Classification Tree 
+```{r}
+library(rpart)
+library(rpart.plot)
+m1 <- rpart(PriceRange ~. , data = d1,
+  control = rpart.control(minsplit = 2))
+plot1<-prp(m1)
+
+```
+
 ## Preparing the Data: Training and Test
 
 Before building our supervised learning models, we must first create our training and test sub datasets.
 
 ```{r}
-#class <- ordered(d1$RestaurantsPriceRange2, levels= c("1", "2", "3", "4")) 
-#d1$class <- class
+
 s.size <- floor(0.75 * nrow(d1))
 set.seed(10)
 train.data <- sample(seq_len(nrow(d1)), size = s.size)
@@ -172,10 +186,8 @@ Though this is a classification exercise, the first model we developed was a lin
 
 ```{r}
 lm.train <- train[complete.cases(train),]
-lm.train$RestaurantsPriceRange2 <- as.numeric(lm.train$RestaurantsPriceRange2)
-lin.mod <- lm(RestaurantsPriceRange2 ~ stars + review_count + latitude + 
-                longitude + RestaurantsAttire +
-                RestaurantsTakeOut + OutdoorSeating + Alc,  data = lm.train)
+lm.train$PriceRange <- as.numeric(lm.train$PriceRange)
+lin.mod <- lm(PriceRange ~.,  data = lm.train)
 
 ## Predicting Price
 predicted.price <- predict(lin.mod, newdata = test)
@@ -183,7 +195,7 @@ predicted.price.rounded <- round(predicted.price, digits = 0)
 yp <- predicted.price.rounded
 
 ## Misclassification rate:
-yt <- test$RestaurantsPriceRange2
+yt <- test$PriceRange
 
 mcr <- table(predicted.price.rounded,yt)
 
@@ -194,7 +206,28 @@ With this model we find a misclassification rate of 27.62%. While this modeling 
 
 ## Ordignal Regression
 
-## Classification Tree
+```{r}
+class <- ordered(d1$PriceRange, levels= c("1", "2", "3", "4")) 
+d1$class <- class
+set.seed(20)
+olr.train.data <- sample(seq_len(nrow(d1)), size = s.size)
+olr.train <- d1[olr.train.data, ]
+olr.test <- d1[-olr.train.data, ]
+olr.train$PriceRange = NULL
+olr.test$PriceRange = NULL
+
+m3 <- polr(class ~. ,  data = olr.train,  Hess = TRUE) 
+m3
+predicted.price3 <- predict(m3, newdata = olr.test)
+predicted.price3
+# misclassification rate: 
+yp2 <- predicted.price3
+yt2 <- olr.test$class
+mcr2 <- table(yp2,yt)
+1-sum(diag(mcr2))/sum(mcr2)
+
+```
+
 
 
 # Discussion
