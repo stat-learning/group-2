@@ -8,25 +8,28 @@ date: "12/10/2019"
 output: pdf_document
 ---
 
-Technical Report
-Your technical report should be an .Rmd file that contains the following sections. So as not to make the compilation (knitting) of the document not take too long, consider setting cache = TRUE in the curly braces of any R chunk with substantial computing. Please knit both to pdf and github document (.md).
-
+***
 
 # Abstract
-A brief overview of the area that you’ll be investigating, the research question(s) of interest, your approach to analysis, and the general conclusions.
-
 In this project, we leverage a large Yelp data set comprised of about 200k observations in order to build a predictive model of restaurant prices. We go about answering this question deploying three supervised learning models: linear regression, ordinal regression, and classification trees. We find that the available variables have fairly limited predictive power across our models.
 
+### Preparing Libraries
+```{r}
+library(ggplot2)
+library(Amelia)
+library(rlist)
+library(dplyr)
+library(tidyverse)
+library(jsonlite)
+library(rcompanion)
+```
 
 
 # Introduction
-Overview of the setting of the data, existing theories/models (particularly if you are working in a descriptive/inferential setting), and your research questions.
-
+In this project we want to use a large dataset provided by Yelp to predict restaurant prices. Economic intuition would have it that there are certain things restaurants might sell and/or provide that would make them more or less expensive, a prime example being the sale of alcohol. Thus, with this project we wish to put this intuition to the test. The Yelp dataset is comprised of many individual restaurant observations with variables that are likely determinants of the restaurants prices, such as whether they provide outdoor seating or the expected attire, so with this data we go about building a variety of models which might predict a given restaurant's price range.
 
 
 # The Data
-Where does the data come from? How many observations? How many variables? What does each observation refer to (what is the observational unit)? What sorts of data processing was necessary to get the data in shape for analysis?
-
 The data used in this project comes from the Yelp Open Dataset. This is a massive dataset Yelp releases for educational purposes, which is comprised of three main sub datasets: reviews, business, and images. In this project we use the business dataset, a dataset which contains a variety of descriptive variables for 192,609 business location. However, in this project we're focused specifically on restaurants, so when we trim the data to only include restaurants we end up with 59,371 total observations. Each observation is a given restaurant with all of the associated variables, from name of the restaurant, star rating through whether the restaurant serves alcohol. There are a total of 53 variables.
 
 In order to perform any meaningful analysis we needed to clean the data. Thus, as mentioned previously, we began this process by cutting the data to only include restaurants. This resulted in a total of 59,371 observations. We then filtered the data set to only include predictor variables we believed would have the strongest predictive capability- such as: # of stars, whether the restaurant served alcohol, etc.- and proceeded to further cut the data to only include observations which were complete (included an observation for every variable). This resulted in a dataset with 40,584 observations, a loss of about 30% of original observations. We have no reason to believe there exist systematic reasons as to why restaurants would omit data on these variables, and thus chose this as our final dataset, which we use to perform our analysis and create our models.
@@ -37,37 +40,11 @@ Explore the structure of the data through graphics. Here you can utilize both tr
 
 In this section we look over the data in order to identify trends, concerns, and other consideration we might need to take into account when creating our models.
 
-## Missingness
-First, we looked at the missingness in the data.
+### Initial Data Prep
+First, we load up the data before we begin our exploratory analysis. 
+We also filter the data for the explanatory variables we wish to use.
 
-```{r, cache = TRUE}
-library(ggplot2)
-library(Amelia)
-
-## Missingness when including all of the restaurant observations
-missmap(rdata)
-
-## Missingness in categorical variables
-alcohol <- data.frame(rdata$Alcohol)
-outdoorseating <- data.frame(rdata$OutdoorSeating)
-dresscode <- data.frame(rdata$RestaurantsAttire)
-missmap(outdoorseating)
-missmap(alcohol)
-missmap(dresscode)
-
-## Missingness when this is removed (should be 0%(it is))
-##missmap(rdata.clean)
-```
-
-Now that we have a cursory look at the overall data, we turn to preparing it for a survey of the response and predictive variables.
-
-## Preparing Data
 ```{r}
-library(rlist)
-library(dplyr)
-library(tidyverse)
-library(jsonlite)
-
 #business <- stream_in(file("business.json"))
 clean.business <- business
 
@@ -85,7 +62,33 @@ restaurant_data <- cbind(restaurant_data, attribute)
 voi <- c("name", "city", "state", "latitude", "longitude", "stars", "review_count", "RestaurantsTakeOut", 
          "RestaurantsPriceRange2", "OutdoorSeating", "Alcohol", "categories", "RestaurantsAttire")
 rdata <- subset(restaurant_data, select=voi)
+```
 
+## Missingness
+Now we look at the missingness in the data.
+
+```{r, cache = TRUE}
+## Missingness when including all of the restaurant observations
+missmap(rdata)
+
+## Missingness in the response
+prices <- data.frame(rdata$RestaurantsPriceRange2)
+missmap(prices)
+
+## Missingness in the explanatory variables
+alcohol <- data.frame(rdata$Alcohol)
+outdoorseating <- data.frame(rdata$OutdoorSeating)
+dresscode <- data.frame(rdata$RestaurantsAttire)
+missmap(outdoorseating)
+missmap(alcohol)
+missmap(dresscode)
+
+```
+
+The missingness maps reveal that though our overall missingness is minimal, there are a couple things worth noting. In terms of the response variable, it is only 12% which is not too concerning since we still have a value for the major of observations. Further, we notice that the missingness is concentrated around the more niche variables, which are the determinants of the price range. This would be an issue if we considered there to exist a systematic issue in the missingness occurring, however we do not think this is the case. We believe the missingness is randomly distributed, so we assume it is not problematic to simply get rid of observations which do not have values for all of our variables. Thus, the final data we use will contain only complete observations. Now that we have a cursory look at the overall data and know that we will get rid of incomplete observations, we turn to preparing it for a survey of the response and predictive variables.
+
+## Preparing Data
+```{r}
 ##Cleaning Data to only include complete observations
 rdata.clean <- rdata[complete.cases(rdata),]
 
@@ -139,7 +142,6 @@ This will be the most extensive section and will include your results as well.
 
 ## Preparing the Data: Training and Test
 ```{r}
-library(tidyverse)
 #class <- ordered(rdata.clean$RestaurantsPriceRange2, levels= c("1", "2", "3", "4")) 
 #rdata.clean$class <- class
 s.size <- floor(0.75 * nrow(rdata.clean))
@@ -151,8 +153,6 @@ test <- rdata.clean[-train.data, ]
 
 ## Linear Model
 ```{r}
-library(rcompanion)
-
 lm.train <- train[complete.cases(train),]
 lm.train$RestaurantsPriceRange2 <- as.numeric(lm.train$RestaurantsPriceRange2)
 lin.mod <- lm(RestaurantsPriceRange2 ~ stars + review_count + latitude + 
@@ -185,7 +185,6 @@ mcr2 <- table(predicted.price.rounded,yt)
 
 # Discussion
 Review the results generated above and sythensize them in the context from which the data originated. What do the results tell your about your original research question? Are there any weaknesses that you see in your analysis? What additional questions would you explore next?
-
 
 
 # References
