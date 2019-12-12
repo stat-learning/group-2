@@ -12,71 +12,98 @@ library(dplyr)
 library(tidyverse)
 library(jsonlite)
 
-business <- stream_in(file("business.json"))
+#business <- stream_in(file("business.json"))
 clean.business <- business
+
+## Filtering for restaurants
 clean.business$Restaurant <- 0 
 new.business <- mutate(clean.business, Restaurant=grepl("Restaurants", clean.business$categories))
-clean.yelp <- filter(new.business, Restaurant == "TRUE")
-attribute <- clean.yelp$attributes
-restaurant_data <- clean.yelp
+restaurants <- filter(new.business, Restaurant == "TRUE")
+
+## Isolating the important variables
+attribute <- restaurants$attributes
+restaurant_data <- restaurants
 restaurant_data$attributes <- NULL
+restaurant_data$Restaurant <- NULL
 restaurant_data <- cbind(restaurant_data, attribute)
 voi <- c("name", "city", "state", "latitude", "longitude", "stars", "review_count", "RestaurantsTakeOut", 
-         "RestaurantsPriceRange2", "OutdoorSeating", "Alcohol", "categories")
+         "RestaurantsPriceRange2", "OutdoorSeating", "Alcohol", "categories", "RestaurantsAttire")
 rdata <- subset(restaurant_data, select=voi)
+
+##Cleaning Data to only include complete observations
 rdata.clean <- rdata[complete.cases(rdata),]
+
+## Fixing Variables
+rdata.clean$OutdoorSeating <- as.logical(rdata.clean$OutdoorSeating)
+rdata.clean$OutdoorSeating <- as.numeric(rdata.clean$OutdoorSeating)
+
+rdata.clean$RestaurantsTakeOut <- as.logical(rdata.clean$RestaurantsTakeOut)
+rdata.clean$RestaurantsTakeOut <- as.numeric(rdata.clean$RestaurantsTakeOut)
+
+#Assigning categorical levels 1, 2, or 3 for alcohol
+rdata.clean$Alc <- 0 
+lvlone <- c("'none'", "u'none'")
+lvltwo <- c("'beer_and_wine'", "u'beer_and_wine'")
+lvlthree <- c( "'full_bar'", "u'full_bar'")
+rdata.clean$Alc <- ordered(rdata.clean$Alcohol, levels = lvlone, lvltwo, lvlthree)
+rdata.clean$Alc <- as.numeric(rdata.clean$Alc)
+rdata.clean$Alc <- rdata.clean$Alc %>% replace_na(3)
 ```
 
 Subsetting train and test data: 
 ```{r}
 library(tidyverse)
-class <- ordered(rdata.clean$RestaurantsPriceRange2, levels= c("1", "2", "3", "4")) 
-rdata.clean$class <- class
+#class <- ordered(rdata.clean$RestaurantsPriceRange2, levels= c("1", "2", "3", "4")) 
+#rdata.clean$class <- class
 s.size <- floor(0.75 * nrow(rdata.clean))
 set.seed(10)
 train.data <- sample(seq_len(nrow(rdata.clean)), size = s.size)
 train <- rdata.clean[train.data, ]
 test <- rdata.clean[-train.data, ]
-
 ```
 
 LM 
 ```{r}
-lm.train <- na.omit(train)
-lin.mod <- lm(RestaurantsPriceRange2 ~ stars + review_count + latitude + longitude,  data = lm.train)
+library(rcompanion)
+
+lm.train <- train[complete.cases(train),]
+lm.train$RestaurantsPriceRange2 <- as.numeric(lm.train$RestaurantsPriceRange2)
+lm.train$RestaurantsPriceRange2 <- lm.train$RestaurantsPriceRange2
+lin.mod <- lm(RestaurantsPriceRange2 ~ stars + review_count + latitude + 
+                longitude + RestaurantsAttire +
+                RestaurantsTakeOut + OutdoorSeating + Alcohol,  data = lm.train)
 
 #Predicting Price
 predicted.price <- predict(lin.mod, newdata = test)
-predicted.2 <- round(predicted.price, digits = 0)
+predicted.price.rounded <- round(predicted.price, digits = 0)
+yt <- test$RestaurantsPriceRange2
 
-mcr2 <- table(predicted.2,yt)
+# Misclassification rate: 
+
+## Rounding Model
+table_2 <- data.frame(predicted.price.rounded, yt)
+mcr2 <- table(predicted.price.rounded,yt)
 1-sum(diag(mcr2))/sum(mcr2)
-
-table_2 <- data.frame(predicted.2, yt)
-
-ggplot(table_2, aes(x=yt, y=predicted.2)) + 
+ggplot(table_2, aes(x=yt, y=predicted.price.rounded)) + 
   geom_point()+
   labs(title="Predicted v Actual: Linear Model (W/ Rounding)",
        x="Actual Price Range", y = "Predicted Price Range") +
   theme_classic()
 
-# Misclassification rate: 
-yp <- predicted.price
+## Linear Model w/o rounding
+yp <- predicted.price.rounded
 yt <- test$RestaurantsPriceRange2
 
-na.omit(table)
-
 table <- data.frame(yp,yt)
-
 mcr.table <- table(yp,yt)
 
 1-sum(diag(mcr.table))/sum(mcr.table)
-
 ggplot(table, aes(x=yt, y=yp)) + 
   geom_point()+
   labs(title="Predicted v Actual: Linear Model",
        x="Actual Price Range", y = "Predicted Price Range") +
   theme_classic()
+
 ```
 
 ```{r}
