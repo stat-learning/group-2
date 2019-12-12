@@ -11,14 +11,13 @@ output: pdf_document
 In this project, we leverage a large Yelp data set comprised of about 200k observations in order to build a predictive model of restaurant prices. We go about answering this question deploying three supervised learning models: linear regression, ordinal regression, and classification trees. We find that the available variables have fairly limited predictive power across our models.
 
 ### Preparing Libraries
-```{r}
+```{r message=FALSE}
 library(ggplot2)
 library(Amelia)
 library(rlist)
 library(dplyr)
 library(tidyverse)
 library(jsonlite)
-library(rcompanion)
 library(MASS)
 ```
 
@@ -42,7 +41,7 @@ In this section we look over the data in order to identify trends, concerns, and
 First, we load up the data before we begin our exploratory analysis. 
 We also filter the data for the explanatory variables we wish to use.
 
-```{r}
+```{r message = FALSE, results='hide'}
 business <- stream_in(file("business.json"))
 clean.business <- business
 
@@ -57,8 +56,10 @@ restaurant_data <- restaurants
 restaurant_data$attributes <- NULL
 restaurant_data$Restaurant <- NULL
 restaurant_data <- cbind(restaurant_data, attribute)
-voi <- c("name", "city", "state", "latitude", "longitude", "stars", "review_count", "RestaurantsTakeOut", 
-         "RestaurantsPriceRange2", "OutdoorSeating", "Alcohol", "categories", "RestaurantsAttire")
+voi <- c("name", "city", "state", "latitude", "longitude", 
+         "stars", "review_count", "RestaurantsTakeOut", 
+         "RestaurantsPriceRange2", "OutdoorSeating", "Alcohol", 
+         "categories", "RestaurantsAttire")
 rdata <- subset(restaurant_data, select=voi)
 ```
 
@@ -85,7 +86,7 @@ missmap(dresscode)
 The missingness maps reveal that though our overall missingness is minimal, there are a couple things worth noting. In terms of the response variable, it is only 12% which is not too concerning since we still have a value for the major of observations. Further, we notice that the missingness is concentrated around the more niche variables, which are the determinants of the price range. This would be an issue if we considered there to exist a systematic issue in the missingness occurring, however we do not think this is the case. We believe the missingness is randomly distributed, so we assume it is not problematic to simply get rid of observations which do not have values for all of our variables. Thus, the final data we use will contain only complete observations. Now that we have a cursory look at the overall data and know that we will get rid of incomplete observations, we turn to preparing it for a survey of the response and predictive variables.
 
 ## Preparing Data
-```{r}
+```{r message = FALSE, results='hide'}
 ##Cleaning Data to only include complete observations
 rdata.clean <- rdata[complete.cases(rdata),]
 
@@ -188,7 +189,6 @@ plot1<-prp(m1)
 Before building our supervised learning models, we must first create our training and test sub datasets.
 
 ```{r}
-
 s.size <- floor(0.75 * nrow(d1))
 set.seed(10)
 train.data <- sample(seq_len(nrow(d1)), size = s.size)
@@ -200,8 +200,9 @@ test <- d1[-train.data, ]
 
 Though this is a classification exercise, the first model we developed was a linear model with rounding, as follows:
 
-```{r}
-d1$PriceRange <- as.numeric(d1$PriceRange)
+```{r message=FALSE}
+train$PriceRange <- as.numeric(train$PriceRange) 
+test$PriceRange <- as.numeric(test$PriceRange) 
 m2 <- lm(PriceRange ~.,  data = train)
 
 ## Predicting Price
@@ -212,32 +213,36 @@ yp <- predicted.price.rounded
 ## Misclassification rate:
 yt <- test$PriceRange
 
-mcr2 <- table(yp,yt)
+mcr <- table(yp,yt)
 
-1-sum(diag(mcr2))/sum(mcr2)
+1-sum(diag(mcr))/sum(mcr)
 ```
 
 A couple of things are worth noting about our process in building this model. First, we aimed to address the issue around the right skewedness of the data by performing some transformations. However, none of these changes significantly improved the predictive strength of the model, thus we chose to not keep any of the transformations. Regarding the explanatory variables we chose, we also tried a variety of models with different variables and opted to choose this one.
 
-With this model we find a misclassification rate of 27.52%. While this modeling method is not necessarily made for this exercise, it is quite robust since it identifies just over 70% of restaurant price ranges correctly. However, we wished to further develop our understanding of the relationship between restaurant prices and the variables, so we continue our explorations with an Ordinal Regression, which should more aptly tackle the classification nature of this problem.
+With this model we find a misclassification rate of 28.52%. While this modeling method is not necessarily made for this exercise, it is quite robust since it identifies just over 70% of restaurant price ranges correctly. However, we wished to further develop our understanding of the relationship between restaurant prices and the variables, so we continue our explorations with an Ordinal Regression, which should more aptly tackle the classification nature of this problem.
 
 ## Ordinal Regression
 
-```{r}
+```{r message=FALSE, results='hide'}
+library(MASS)
 class <- ordered(d1$PriceRange, levels= c("1", "2", "3", "4")) 
 d1$class <- class
 set.seed(20)
 olr.train.data <- sample(seq_len(nrow(d1)), size = s.size)
 olr.train <- d1[olr.train.data, ]
 olr.test <- d1[-olr.train.data, ]
-olr.train$PriceRange = NULL
-olr.test$PriceRange = NULL
-
+olr.train <- olr.train[c(-6)]
+olr.test <- olr.test[c(-6)]
 m3 <- polr(class ~. ,  data = olr.train,  Hess = TRUE) 
 m3
 predicted.price3 <- predict(m3, newdata = olr.test)
 predicted.price3
-# misclassification rate: 
+
+```
+
+## OLR Misclassification Rate: 
+```{r}
 yp2 <- predicted.price3
 yt2 <- olr.test$class
 mcr2 <- table(yp2,yt2)
@@ -246,16 +251,8 @@ mcr2 <- table(yp2,yt2)
 ```
 
 
-
 # Discussion
-The variables provided to us with the data set from Yelp included: the name of the business, city, state, latitude, longitude, stars, review count, whether they do take out or not, the price range, whether or not they offer outdoor seating, whether or not they have a full bar inside, the category that the business falls into, and the attire of the restaurant. From this data set, we decided to try and create a model that predicted the price range of the restaurant; i.e, the number of dollar signs displayed on Yelp. We attempted to model this potential relationship with a linear regression (both with and without rounding due to only integer number of dollar signs), ordinal regression, and classification trees. From this data, we decided to use the numerical variables: latitude, longitude, number of stars, and review count; as well as the qualitative variables: alcohol, attire, outdoor seating, and takeout. We found that our qualitative variables (such as stars, alcohol,attire) were fairly strong predictors of price range.
-
-Using a linear model with rounding we were able to obtain a misclassification rate of 27.62%. Using the ordinal regression model, we were able to obtain a misclassification rate just slightly better than the linear model: a misclassification rate of 27.5%. Both these models are somewhat accurate as just guessing 2$ for each restaurant would yield roughly a 50% accuracy rate, and both these models would be 22.38% and 22.5% more accurate, respectively. However, both of these models could be improved upon with the addition of more variables, perhaps from the entirety of Yelp’s dataset. 
-
-Our classification tree using only numerical variables resulted in all branches ending in a 1 or 2, not surprising since the bulk of the restaurants in the data are rated as 1 or 2 dollar signs. However, utilizing the qualitative predictors show that they are more important as the result in a single branch ending in a 3.
-
-Future research into this model may consider utilizing more variables from the Yelp data set that were omitted from this analysis due to missingness or lack of theoretical support, and might also incorporate the actual text reviews into the prediction. Our model controls for variations in price ranges across the 10 geographical areas, so we do not believe that the addition of new metropolitan areas would make the models more robust, since we assume that the price distribution that exists with these 10 would extend to any additional metro areas. Considering some unsupervised techniques, like PCA, may also be helpful in generating the model. It may also help to explore whether the type of restaurant (whether it be Chinese food or a steakhouse) affects the price range as it does seem like a potential indicator. The drawback of using this data set was that it characterized each restaurant as different types and not a single characteristic. It may also be worthwhile to see whether or not the variable we included effect the number of stars that a restaurant has on Yelp.
-
+Review the results generated above and sythensize them in the context from which the data originated. What do the results tell your about your original research question? Are there any weaknesses that you see in your analysis? What additional questions would you explore next?
 
 # References
 
